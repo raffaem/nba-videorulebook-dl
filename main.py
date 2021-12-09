@@ -13,6 +13,9 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Call this script from the command line like
+# scrapy runspider main.py
     
 import scrapy
 import scrapy.exceptions
@@ -20,7 +23,7 @@ import os
 import subprocess
 import logging
 
-basepath = "./vids5"
+basepath = "./vids"
 
 def norm_str(s):
     return s.replace("\n","").replace("\\","_").replace("/","_").replace("\"","").replace("'","").strip()
@@ -76,7 +79,7 @@ class NBAVRBSpider(scrapy.Spider):
             filepath = path + "/" + title + ".mp4"
             print("PATH: '{}'\nLINK: '{}'\nTITLE:\n'{}'\nFILEPATH:'{}'".format(path,link,title,filepath))
 
-            command = ['wget','-O',filepath, link]
+            command = ['wget','--no-check-certificate','-O',filepath,link]
             if not os.path.isfile(filepath):
                 subprocess.call(command)
             else:

@@ -1,18 +1,18 @@
 # nba-videorulebook-dl - Download the video rulebook of NBA
-# Copyright (C) 2019 Raffaele Mancuso
 
+# ******************************************************************* #
+# Copyright (C) 2021 Raffaele Mancuso
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# ******************************************************************* #
 
 # Call this script from the command line like
 # scrapy runspider main.py
@@ -30,34 +30,29 @@ def norm_str(s):
 
 class NBAVRBSpider(scrapy.Spider):
     name = 'nba-vrb'
-
-    start_urls = ['http://videorulebook.nba.com']
+    start_urls = ['https://videorulebook.nba.com']
 
     def __init__(self):
         logging.getLogger('scrapy').setLevel(logging.WARNING)
         self.download_delay = 1
-        pass
 
     def parse(self, response):
-        for rule in response.css('.menu-item-type-taxonomy'):
+        for rule in response.css('li.menu-item-has-children'):
+            self.parse(rule)
+        for rule in response.css('li:not(.menu-item-has-children)'):
             yield response.follow(rule.css('a')[0], self.parseRule)
 
     def parseRule(self, response):
+        crumbs = list()
+        for crumb in response.css("div.rule-breadcrumb > div.rule-crumb"):
+            crumbs.append(crumb.css("::text").get().replace("/","-"))
+        path = os.path.join(*crumbs)
+        print(path)
+        path = os.path.join(basepath, path)
+        os.makedirs(path, exist_ok=True)
         for videothumb in response.css('.video-thumbnail'):
-            breadcrumb = response.css('div.rule-breadcrumb')
-            if breadcrumb:
-                path = "./vids5"
-                section_text = ""
-                for text in breadcrumb.xpath("//div[contains(@class,'rule-crumb')]/text()").extract():
-                    section_text += "/" + norm_str(text)
-                path += section_text
-                meta = {"path":path}
-                print("Scraping: {}".format(section_text))
-                yield response.follow(videothumb.css('a')[0], self.parseVideo, meta=meta)
-            else:
-                print("ERROR: breadcrumb is not valid. URL='{}'".format(response.request.url))
-                raise scrapy.exceptions.CloseSpider('invalid_breadcrumb')
-
+            meta = {"path": path}
+            yield response.follow(videothumb.css('a')[0], self.parseVideo, meta=meta)
 
     def parseVideo(self, response):
         path = response.meta['path']
@@ -74,9 +69,7 @@ class NBAVRBSpider(scrapy.Spider):
                 print("FATAL ERROR: title not found. URL='{}'".format(response.request.url))
                 raise scrapy.exceptions.CloseSpider('no_title')
 
-            os.makedirs(path, exist_ok=True)
-
-            filepath = path + "/" + title + ".mp4"
+            filepath = os.path.join(path, title + ".mp4")
             print("PATH: '{}'\nLINK: '{}'\nTITLE:\n'{}'\nFILEPATH:'{}'".format(path,link,title,filepath))
 
             command = ['wget','--no-check-certificate','-O',filepath,link]

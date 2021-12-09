@@ -46,6 +46,8 @@ class NBAVRBSpider(scrapy.Spider):
         crumbs = list()
         for crumb in response.css("div.rule-breadcrumb > div.rule-crumb"):
             crumbs.append(crumb.css("::text").get().replace("/","-"))
+        if len(crumbs==0):
+            return
         path = os.path.join(*crumbs)
         print(path)
         path = os.path.join(basepath, path)
@@ -76,5 +78,14 @@ class NBAVRBSpider(scrapy.Spider):
             if not os.path.isfile(filepath):
                 subprocess.call(command)
             else:
-                print("File already exist")
+                print("Video file already exist")
+           
+            text = response.css("div.entry-excerpt > div > p::text").get()
+            filepath = os.path.join(path, title + ".txt")
+            if not os.path.isfile(filepath):
+                with open(filepath, "w", encoding="utf8") as fh:
+                    fh.write(text)
+            else:
+                print("Text file already exist")
+                
             yield None

@@ -37,8 +37,6 @@ class NBAVRBSpider(scrapy.Spider):
         self.download_delay = 1
 
     def parse(self, response):
-        for rule in response.css('li.menu-item-has-children'):
-            self.parse(rule)
         for rule in response.css('li:not(.menu-item-has-children)'):
             yield response.follow(rule.css('a')[0], self.parseRule)
 
@@ -46,7 +44,7 @@ class NBAVRBSpider(scrapy.Spider):
         crumbs = list()
         for crumb in response.css("div.rule-breadcrumb > div.rule-crumb"):
             crumbs.append(crumb.css("::text").get().replace("/","-"))
-        if len(crumbs==0):
+        if len(crumbs)==0:
             return
         path = os.path.join(*crumbs)
         print(path)
